@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Job {
+  id        Int      @id @default(autoincrement())
+  jobTitle  String   @map("job_title")
+  company   String
+  location  String   @default("N/A")
+  salary    String   @default("N/A")
+  tags      String   @default("")
+  applyLink String   @unique @map("apply_link")
+  source    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([source])
+  @@index([jobTitle])
+  @@index([company])
+  @@map("jobs")
+}
+
+enum ScrapeStatus {
+  pending
+  running
+  completed
+  failed
+}
+
+model ScrapeLog {
+  id           Int          @id @default(autoincrement())
+  keyword      String       @default("")
+  location     String       @default("")
+  sites        String       @default("")
+  jobsFound    Int          @default(0) @map("jobs_found")
+  status       ScrapeStatus @default(pending)
+  startedAt    DateTime     @default(now()) @map("started_at")
+  completedAt  DateTime?    @map("completed_at")
+  errorMessage String?      @map("error_message")
+
+  @@map("scrape_logs")
+}

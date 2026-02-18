@@ -1,0 +1,553 @@
+================================================================================
+                        JOBFY v2 — PROJECT STUDY NOTES
+                    Full-Stack Job Scraper Dashboard (2024)
+================================================================================
+
+OVERVIEW
+--------
+JobFy v2 is a complete rebuild of a Python/FastAPI job scraping dashboard into
+a modern TypeScript monorepo. It scrapes job listings from 5 websites, stores
+them in PostgreSQL, and displays them through a React dashboard with charts
+and filtering.
+
+This project demonstrates: monorepo architecture, TypeScript end-to-end,
+REST API design, web scraping, database modeling, testing at every level,
+Docker containerization, and CI/CD with GitHub Actions.
+
+
+================================================================================
+1. TECH STACK
+================================================================================
+
+  Frontend:        React 19 + TypeScript + Vite
+  Backend:         Node.js + Express + TypeScript
+  Database:        PostgreSQL 16 + Prisma ORM
+  Validation:      Zod (shared between front and back)
+  Scraping:        Axios + Cheerio (HTML parsing)
+  Charts:          Recharts
+  Icons:           Lucide React
+  Logging:         Pino
+  Testing:         Jest, Supertest, React Testing Library, Cypress
+  Containerization: Docker (multi-stage builds) + Docker Compose
+  CI/CD:           GitHub Actions
+  Package Mgmt:    npm workspaces (monorepo)
+
+
+================================================================================
+2. ARCHITECTURE
+================================================================================
+
+  JobFy-v2/
+  ├── packages/shared/         @jobfy/shared — shared types, validators, constants
+  │   └── src/
+  │       ├── types.ts         Job, ScrapeLog, StatsResponse, PaginatedResponse, etc.
+  │       ├── validators.ts    Zod schemas: scrapeRequestSchema, jobQuerySchema
+  │       └── constants.ts     SITE_IDS tuple, SITE_COLORS map
+  │
+  ├── packages/backend/        @jobfy/backend — Express REST API
+  │   ├── prisma/
+  │   │   ├── schema.prisma    Job + ScrapeLog models, ScrapeStatus enum
+  │   │   └── seed.ts          Sample data seeder
+  │   └── src/
+  │       ├── config/          env.ts (Zod-validated), sites.ts (5 site configs)
+  │       ├── lib/             prisma.ts, logger.ts (pino)
+  │       ├── middleware/      errorHandler, validateRequest, requestLogger
+  │       ├── services/        jobs, stats, scrape (business logic layer)
+  │       ├── routes/          jobs, stats, scrape, sites (HTTP layer)
+  │       ├── scrapers/        base + 5 site-specific scrapers
+  │       ├── app.ts           Express app factory (testable)
+  │       └── index.ts         Entry point
+  │
+  ├── packages/frontend/       @jobfy/frontend — React SPA
+  │   ├── src/
+  │   │   ├── services/        api.ts (fetch wrapper), jobs/stats/scrape API clients
+  │   │   ├── hooks/           useJobs, useStats, useScrape, useDebounce
+  │   │   ├── components/      18 React components (see section 5)
+  │   │   └── styles/          globals.css, components.css
+  │   └── cypress/             E2E test specs
+  │
+  ├── docker-compose.yml       Dev: postgres + backend + frontend with hot reload
+  ├── docker-compose.prod.yml  Prod: multi-stage builds + nginx
+  └── .github/workflows/ci.yml Lint → Test → E2E → Docker build
+
+
+WHY MONOREPO WITH NPM WORKSPACES?
+  - Shared types between frontend and backend prevent drift
+  - Single npm install, single lock file
+  - Atomic changes across packages in one commit
+  - Simpler CI — one checkout, all code available
+
+WHY THESE SPECIFIC TOOLS?
+  - Prisma over raw SQL: type-safe queries, auto-generated client, migrations
+  - Zod over manual validation: runtime + compile-time safety, shared schemas
+  - Express over Fastify/NestJS: simplicity, massive ecosystem, easy to test
+  - Cheerio over Puppeteer: lightweight, no browser needed, fast for static HTML
+  - Pino over Winston: fastest Node.js logger, structured JSON output
+
+
+================================================================================
+3. DATABASE DESIGN
+================================================================================
+
+  Model: Job
+  ┌──────────────┬──────────┬─────────────────────────────────┐
+  │ Field        │ Type     │ Notes                           │
+  ├──────────────┼──────────┼─────────────────────────────────┤
+  │ id           │ Int (PK) │ Auto-increment                  │
+  │ jobTitle     │ String   │ Indexed for search              │
+  │ company      │ String   │ Indexed                         │
+  │ location     │ String   │ Default "N/A"                   │
+  │ salary       │ String   │ Default "N/A"                   │
+  │ tags         │ String   │ Comma-separated                 │
+  │ applyLink    │ String   │ UNIQUE — prevents duplicates    │
+  │ source       │ String   │ Indexed (RemoteOK, Indeed, etc) │
+  │ createdAt    │ DateTime │ Auto-set on creation            │
+  └──────────────┴──────────┴─────────────────────────────────┘
+
+  Model: ScrapeLog
+  ┌──────────────┬──────────────┬──────────────────────────────┐
+  │ Field        │ Type         │ Notes                        │
+  ├──────────────┼──────────────┼──────────────────────────────┤
+  │ id           │ Int (PK)     │ Auto-increment               │
+  │ keyword      │ String       │ Search term used             │
+  │ location     │ String       │ Location filter used         │
+  │ sites        │ String       │ Comma-separated site IDs     │
+  │ jobsFound    │ Int          │ Total new jobs stored        │
+  │ status       │ ScrapeStatus │ Enum: pending/running/       │
+  │              │              │ completed/failed             │
+  │ startedAt    │ DateTime     │ Auto-set                     │
+  │ completedAt  │ DateTime?    │ Nullable until finished      │
+  │ errorMessage │ String?      │ Error details if failed      │
+  └──────────────┴──────────────┴──────────────────────────────┘
+
+  KEY DESIGN DECISION: @@unique([applyLink])
+    The v1 project manually did SELECT-before-INSERT to avoid duplicates.
+    In v2, we use a database-level unique constraint on applyLink. On conflict,
+    Prisma throws an error which we silently catch — simpler, race-condition safe.
+
+
+================================================================================
+4. API ENDPOINTS
+================================================================================
+
+  Method  Path                Notes
+  ──────  ──────────────────  ─────────────────────────────────────────
+  GET     /api/health         Docker healthcheck, returns {"status":"ok"}
+  GET     /api/jobs           ?search, ?source, ?limit, ?offset
+  GET     /api/jobs/:id       Single job by ID
+  DELETE  /api/jobs/:id       Delete one job
+  DELETE  /api/jobs           Clear all jobs
+  GET     /api/stats          Aggregated stats (by source, company, etc.)
+  GET     /api/sites          Available scraper sites
+  POST    /api/scrape         Body: {sites, keyword?, location?}
+  GET     /api/scrape/logs    Recent scrape history
+  GET     /api/scrape/logs/:id  Specific scrape log
+
+  KEY CHANGE FROM v1: The POST /api/scrape endpoint now accepts a JSON body
+  instead of query parameters. This is more RESTful and allows for proper
+  Zod validation on the request body.
+
+  BACKGROUND SCRAPING: When POST /api/scrape is called, it creates a ScrapeLog
+  with status "pending", then fires a Promise (fire-and-forget) that:
+    1. Updates status to "running"
+    2. Iterates over requested sites, instantiates scrapers
+    3. For each scraped job, tries INSERT (catches unique violations silently)
+    4. Updates log to "completed" or "failed" with job count
+
+
+================================================================================
+5. BACKEND ARCHITECTURE — LAYERED DESIGN
+================================================================================
+
+  Request → Route → (Middleware: validate) → Controller → Service → Prisma → DB
+
+  MIDDLEWARE LAYER:
+    - requestLogger: logs every request with pino
+    - validateRequest: two variants — validateBody(schema), validateQuery(schema)
+      Uses Zod schemas from @jobfy/shared. Throws ZodError on invalid input.
+    - errorHandler: catches ZodError → 400 with details, other errors → 500
+
+  SERVICE LAYER (business logic, no HTTP concerns):
+    - jobs.service.ts: getJobs(filters), getJobById, deleteJob, clearAllJobs
+    - stats.service.ts: getStats() — aggregations with Prisma groupBy + tag counting
+    - scrape.service.ts: startScrape(input), getScrapeLogs, getScrapeLogById
+
+  ROUTE LAYER (HTTP concerns only):
+    - Parses params, calls services, sends responses
+    - All async handlers wrapped in try/catch → next(err) for error middleware
+
+  APP FACTORY PATTERN:
+    createApp() returns a configured Express app WITHOUT listening.
+    This is critical for testing — supertest can call the app directly
+    without starting a real server.
+
+
+================================================================================
+6. SCRAPERS — PORTED FROM PYTHON TO TYPESCRIPT
+================================================================================
+
+  All 5 scrapers inherit from BaseScraper (abstract class).
+
+  BaseScraper provides:
+    - HTTP client (axios instance with default headers and timeout)
+    - fetchPage(url) → string | null (with error handling)
+    - parseHtml(html) → cheerio instance
+    - login() → boolean (delegates to abstract performLogin)
+    - scrape(keyword, location) → JobData[] (template method pattern)
+
+  The scrape() method follows the TEMPLATE METHOD PATTERN:
+    1. If requiresAuth → call login()
+    2. Build search URL via getSearchUrl() (abstract)
+    3. Fetch page HTML
+    4. Parse with parseJobListings() (abstract)
+    5. Attach source name to each job
+    6. Return results
+
+  INDIVIDUAL SCRAPERS:
+
+  RemoteOKScraper (remoteok.scraper.ts)
+    - Uses RemoteOK's public JSON API (not HTML scraping)
+    - Overrides scrape() directly since it doesn't need HTML parsing
+    - Filters results locally by keyword
+    - Extracts: position, company, tags array, salary_min/max, slug, location
+    - Limits to 50 results
+
+  TecnoempleoScraper (tecnoempleo.scraper.ts)
+    - Spanish tech job portal, no auth required
+    - Parses links heuristically: looks for <a> tags with href matching job patterns
+    - Filters out navigation links using exclude patterns
+    - Extracts location from job title text (matches city names)
+    - Limits to 30 results
+
+  InfoJobsScraper (infojobs.scraper.ts)
+    - Spain's main job portal, requires auth (optional)
+    - Login: POST form data with username/password, check for "logout" in response
+    - Multiple CSS selector fallbacks for different page layouts:
+      div.ij-OfferCardContent, li.ij-OfferCard, [data-testid='offer-card']
+    - Extracts: title, company, location, salary, tags
+
+  LinkedInScraper (linkedin.scraper.ts)
+    - Requires auth + CSRF token extraction
+    - Login flow: GET /login → parse CSRF → POST /uas/login-submit
+    - Checks for security challenges (checkpoint/challenge in URL)
+    - Parses: div.base-card with multiple fallback selectors
+    - LinkedIn frequently changes CSS classes — multiple selectors per field
+
+  IndeedScraper (indeed.scraper.ts)
+    - No auth required, but has anti-bot protections
+    - Supports multiple country domains (es, mx, ar, com)
+    - Multiple CSS selector strategies for different Indeed layouts
+    - Extracts title from nested span within h2.jobTitle
+
+  DESIGN PATTERN NOTE:
+    Using an abstract class (BaseScraper) rather than an interface because
+    we need shared implementation (fetchPage, login flow, scrape template).
+    The FACTORY pattern in scrapers/index.ts maps site IDs to scraper classes.
+
+
+================================================================================
+7. FRONTEND ARCHITECTURE
+================================================================================
+
+  SERVICES LAYER (src/services/):
+    - api.ts: Generic fetch wrapper — apiFetch<T>(path, init) → T
+      Handles JSON headers, error extraction, base URL from env
+    - jobs.api.ts: fetchJobs, fetchJob, deleteJob, clearAllJobs
+    - stats.api.ts: fetchStats
+    - scrape.api.ts: fetchSites, startScrape, fetchScrapeLogs
+
+  CUSTOM HOOKS (src/hooks/):
+    - useDebounce<T>(value, delay=300): Generic debounce for search input
+    - useJobs(): Full job management — fetch, search, filter, paginate, delete
+      Uses useDebounce internally for search input
+    - useStats(): Fetch and cache stats data
+    - useScrape(onComplete): Site selection, form state, submit, poll logs
+
+  COMPONENT TREE:
+    App
+    ├── Header (logo + tagline)
+    ├── TabNavigation (jobs | stats | scrape)
+    ├── [Jobs tab]
+    │   ├── JobFilters (search input, source dropdown, refresh, clear)
+    │   ├── JobTable
+    │   │   └── JobRow × N (title link, company, location, tags, source badge, actions)
+    │   └── JobPagination (prev/next, page info)
+    ├── [Stats tab]
+    │   └── StatsCharts
+    │       ├── StatCard × 4 (total jobs, companies, locations, tags)
+    │       ├── SourcePieChart (recharts PieChart)
+    │       └── BarChartCard × 3 (companies, skills, locations)
+    ├── [Scrape tab]
+    │   └── ScrapePanel
+    │       ├── ScrapeForm
+    │       │   └── SiteToggle × N
+    │       └── ScrapeLogTable
+    └── Footer
+
+  18 COMPONENTS TOTAL (broken down from v1's 3 monolithic components).
+
+  WHY DECOMPOSE?
+    - Each component has a single responsibility
+    - Easier to test in isolation
+    - Reusable (StatCard, BarChartCard work with any data)
+    - Smaller files are easier to review and maintain
+
+  STYLING:
+    Plain CSS with CSS custom properties (no framework). Dark theme with
+    indigo accent (#6366f1). Responsive breakpoints at 768px and 900px.
+    Each source has a unique badge color.
+
+
+================================================================================
+8. TESTING STRATEGY
+================================================================================
+
+  THREE LEVELS OF TESTING:
+
+  A) UNIT TESTS (Jest)
+     Backend services tested with real PostgreSQL (not mocked):
+     - jobs.service.test.ts: CRUD, filtering, search, clear all
+     - stats.service.test.ts: aggregations, empty state, tag counting
+     - scrape.service.test.ts: log creation, retrieval
+
+     Scraper parser tests with HTML/JSON fixtures:
+     - scrapers.test.ts: Tests parseJobListings() for all 5 scrapers
+       Uses fixture files (real HTML structures) to verify parsing logic
+       Also tests getSearchUrl() for correct URL construction
+
+  B) INTEGRATION TESTS (Jest + Supertest)
+     Tests HTTP layer end-to-end (request → response):
+     - jobs.routes.test.ts: GET/DELETE endpoints, filtering, 404 handling
+     - stats.routes.test.ts: empty stats, aggregated stats
+     - scrape.routes.test.ts: POST validation, log endpoints, sites endpoint
+     Uses createApp() factory — no real server needed (supertest handles it)
+
+  C) FRONTEND TESTS
+     Component tests (Jest + React Testing Library):
+     - JobTable.test.tsx: loading, empty, renders rows, source badges
+     - StatsCharts.test.tsx: loading, stat cards, chart titles (recharts mocked)
+     - ScrapePanel.test.tsx: site toggles, auth badges, form inputs, states
+
+     E2E tests (Cypress):
+     - jobs.cy.ts: table renders, search, filter, delete (API intercepted)
+     - stats.cy.ts: stat cards, chart sections
+     - scrape.cy.ts: site toggles, form, start scrape, logs
+
+  TESTING PATTERNS USED:
+    - App factory pattern: createApp() for supertest without starting server
+    - Fixture files: real HTML for scraper tests, not fragile string literals
+    - API mocking: Cypress cy.intercept() for deterministic E2E tests
+    - Module mocking: jest.mock("recharts") to avoid canvas issues in jsdom
+    - beforeEach cleanup: deleteMany() to ensure test isolation
+
+
+================================================================================
+9. DOCKER SETUP
+================================================================================
+
+  DEVELOPMENT (docker-compose.yml):
+    - PostgreSQL 16 Alpine with healthcheck
+    - Backend: dev stage Dockerfile, tsx watch for hot reload, source volumes
+    - Frontend: dev stage Dockerfile, Vite dev server, source volumes
+    - Backend waits for postgres healthcheck before starting
+
+  PRODUCTION (docker-compose.prod.yml):
+    - PostgreSQL with persistent volume, configurable password
+    - Backend: multi-stage build (builder → production), only dist + prisma
+    - Frontend: multi-stage build (builder → nginx Alpine), static files only
+    - nginx proxies /api/ to backend container
+    - All services have restart: unless-stopped
+
+  BACKEND DOCKERFILE (3 stages):
+    Stage 1 "dev":    Full source + tsx watch
+    Stage 2 "builder": npm ci + tsc compile + prisma generate
+    Stage 3 "production": npm ci --omit=dev + copy dist only
+      Includes HEALTHCHECK command for Docker orchestration
+
+  FRONTEND DOCKERFILE (3 stages):
+    Stage 1 "dev":    Full source + vite dev server
+    Stage 2 "builder": npm ci + vite build
+    Stage 3 "production": nginx Alpine + static dist only
+
+
+================================================================================
+10. CI/CD PIPELINE
+================================================================================
+
+  GitHub Actions workflow (.github/workflows/ci.yml):
+
+    lint-and-typecheck ─┬─→ test-backend ──┬─→ e2e ──→ build-docker
+                        └─→ test-frontend ─┘
+
+  STAGES:
+    1. lint-and-typecheck: Build shared, generate Prisma, typecheck all, lint all
+    2. test-backend: PostgreSQL service container, migrate, run Jest
+    3. test-frontend: Run Jest component tests (parallel with backend)
+    4. e2e: Start backend + frontend, wait-on both, run Cypress
+    5. build-docker: Build production Docker images
+
+  PARALLELISM: test-backend and test-frontend run in parallel after lint passes.
+  E2E only runs after both test jobs succeed. Docker build only after E2E.
+
+  PostgreSQL SERVICE CONTAINERS: GitHub Actions natively supports service
+  containers, so tests run against real PostgreSQL (not SQLite or mocks).
+
+
+================================================================================
+11. KEY DESIGN DECISIONS TO DISCUSS IN INTERVIEWS
+================================================================================
+
+  Q: Why a monorepo instead of separate repos?
+  A: Shared types between front/back prevent API contract drift. Single CI
+     pipeline. Atomic commits across packages. npm workspaces handle linking.
+
+  Q: Why Prisma instead of raw SQL or TypeORM?
+  A: Type-safe query builder auto-generated from schema. Migrations are
+     declarative. Schema is the single source of truth. Trade-off: slightly
+     less control over complex queries, but our queries are straightforward.
+
+  Q: Why Zod for validation?
+  A: Runtime validation + TypeScript type inference from the same schema.
+     Shared between frontend and backend — validate on both sides. Replaces
+     both runtime checks AND TypeScript interfaces.
+
+  Q: How do you handle duplicate jobs?
+  A: Database-level UNIQUE constraint on applyLink. On insert conflict, we
+     catch the Prisma error and skip. This is race-condition safe unlike
+     SELECT-then-INSERT.
+
+  Q: How does the scraping work asynchronously?
+  A: POST /api/scrape creates a log entry and returns immediately. The actual
+     scraping runs as a fire-and-forget Promise. The frontend polls
+     GET /api/scrape/logs every 5 seconds to check status. This is simpler
+     than WebSockets for this use case.
+
+  Q: Why not use a job queue (Bull/BullMQ)?
+  A: For a portfolio project with light load, fire-and-forget Promises are
+     sufficient. A job queue would be the right choice if we needed: retry
+     logic, concurrency limits, persistence across restarts, or multiple
+     worker processes.
+
+  Q: How did you handle the Python → TypeScript port of scrapers?
+  A: Used the same abstract class / template method pattern. BeautifulSoup
+     → Cheerio (same CSS selector API). requests.Session → Axios. Kept
+     the same CSS selectors since the target sites haven't changed.
+
+  Q: Why test scraper parsers with fixture files?
+  A: Scraper tests should be deterministic. Real sites change constantly.
+     Fixture HTML lets us test parsing logic without network calls.
+     If a site changes structure, we update the fixture + parser together.
+
+  Q: Why the app factory pattern (createApp)?
+  A: Separates app configuration from server startup. Supertest can test
+     the app directly without binding to a port. Avoids port conflicts
+     in parallel test runs. Standard Express testing pattern.
+
+  Q: What would you improve with more time?
+  A:
+     - Rate limiting on API endpoints
+     - Redis caching for stats (expensive aggregation queries)
+     - WebSocket for real-time scrape progress
+     - Job queue (BullMQ) for scraping reliability
+     - Authentication/authorization for the dashboard
+     - Puppeteer fallback for JavaScript-rendered sites
+     - OpenAPI/Swagger documentation
+     - Error boundary components in React
+
+
+================================================================================
+12. FILES CREATED (84 total)
+================================================================================
+
+  ROOT (5 files):
+    package.json, tsconfig.base.json, .gitignore, .env.example,
+    docker-compose.yml, docker-compose.prod.yml
+
+  SHARED PACKAGE (5 files):
+    package.json, tsconfig.json, src/types.ts, src/validators.ts,
+    src/constants.ts, src/index.ts
+
+  BACKEND (28 files):
+    package.json, tsconfig.json, Dockerfile, jest.config.ts
+    prisma/schema.prisma, prisma/seed.ts
+    src/config/env.ts, src/config/sites.ts
+    src/lib/prisma.ts, src/lib/logger.ts
+    src/middleware/errorHandler.ts, src/middleware/validateRequest.ts,
+    src/middleware/requestLogger.ts
+    src/services/jobs.service.ts, src/services/stats.service.ts,
+    src/services/scrape.service.ts
+    src/routes/jobs.routes.ts, src/routes/stats.routes.ts,
+    src/routes/scrape.routes.ts, src/routes/sites.routes.ts
+    src/scrapers/base.scraper.ts, src/scrapers/remoteok.scraper.ts,
+    src/scrapers/tecnoempleo.scraper.ts, src/scrapers/infojobs.scraper.ts,
+    src/scrapers/linkedin.scraper.ts, src/scrapers/indeed.scraper.ts,
+    src/scrapers/index.ts
+    src/app.ts, src/index.ts
+
+  BACKEND TESTS (12 files):
+    __tests__/jobs.service.test.ts, __tests__/stats.service.test.ts,
+    __tests__/scrape.service.test.ts, __tests__/scrapers.test.ts,
+    __tests__/jobs.routes.test.ts, __tests__/stats.routes.test.ts,
+    __tests__/scrape.routes.test.ts
+    __tests__/fixtures/remoteok.json, __tests__/fixtures/tecnoempleo.html,
+    __tests__/fixtures/infojobs.html, __tests__/fixtures/linkedin.html,
+    __tests__/fixtures/indeed.html
+
+  FRONTEND (34 files):
+    package.json, tsconfig.json, vite.config.ts, Dockerfile,
+    index.html, nginx.conf, jest.config.ts, cypress.config.ts
+    src/main.tsx, src/App.tsx, src/vite-env.d.ts
+    src/services/api.ts, src/services/jobs.api.ts,
+    src/services/stats.api.ts, src/services/scrape.api.ts
+    src/hooks/useDebounce.ts, src/hooks/useJobs.ts,
+    src/hooks/useStats.ts, src/hooks/useScrape.ts
+    src/components/Header.tsx, src/components/Footer.tsx,
+    src/components/TabNavigation.tsx, src/components/LoadingSpinner.tsx,
+    src/components/EmptyState.tsx, src/components/ConfirmDialog.tsx,
+    src/components/JobFilters.tsx, src/components/JobRow.tsx,
+    src/components/JobTable.tsx, src/components/JobPagination.tsx,
+    src/components/StatCard.tsx, src/components/SourcePieChart.tsx,
+    src/components/BarChartCard.tsx, src/components/StatsCharts.tsx,
+    src/components/SiteToggle.tsx, src/components/ScrapeForm.tsx,
+    src/components/ScrapeLogTable.tsx, src/components/ScrapePanel.tsx
+    src/styles/globals.css, src/styles/components.css
+
+  FRONTEND TESTS (7 files):
+    src/__mocks__/styleMock.ts
+    src/__tests__/JobTable.test.tsx, src/__tests__/StatsCharts.test.tsx,
+    src/__tests__/ScrapePanel.test.tsx
+    cypress/support/e2e.ts
+    cypress/e2e/jobs.cy.ts, cypress/e2e/stats.cy.ts, cypress/e2e/scrape.cy.ts
+
+  CI/CD (1 file):
+    .github/workflows/ci.yml
+
+
+================================================================================
+13. HOW TO RUN
+================================================================================
+
+  LOCAL DEVELOPMENT (without Docker):
+    1. Start PostgreSQL:       brew services start postgresql@16
+    2. Create DB:              createdb jobfy
+    3. Install deps:           npm install
+    4. Build shared:           npm run build -w packages/shared
+    5. Generate Prisma:        cd packages/backend && npx prisma generate
+    6. Run migrations:         DATABASE_URL=postgresql://... npx prisma migrate dev
+    7. Seed data:              DATABASE_URL=postgresql://... npx tsx prisma/seed.ts
+    8. Start backend:          DATABASE_URL=postgresql://... npm run dev -w packages/backend
+    9. Start frontend:         VITE_API_URL=http://localhost:3000 npm run dev -w packages/frontend
+    10. Open browser:          http://localhost:5173
+
+  WITH DOCKER:
+    1. docker compose up       (starts postgres + backend + frontend)
+    2. Open browser:           http://localhost:5173
+
+  RUNNING TESTS:
+    npm test                          # All workspaces
+    npm test -w packages/backend      # Backend unit + integration
+    npm test -w packages/frontend     # Frontend component tests
+    npm run cypress:run -w packages/frontend  # E2E tests
+
+
+================================================================================

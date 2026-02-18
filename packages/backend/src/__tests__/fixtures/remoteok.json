@@ -1,0 +1,25 @@
+[
+  { "legal": "https://remoteok.com/legal" },
+  {
+    "position": "Senior React Developer",
+    "company": "TechCorp",
+    "tags": ["React", "TypeScript", "Node.js"],
+    "slug": "senior-react-developer-techcorp",
+    "salary_min": 80000,
+    "salary_max": 120000,
+    "location": "Worldwide"
+  },
+  {
+    "position": "Python Backend Engineer",
+    "company": "DataFlow",
+    "tags": ["Python", "Django", "PostgreSQL"],
+    "slug": "python-backend-engineer-dataflow",
+    "salary_min": 70000,
+    "salary_max": null,
+    "location": ""
+  },
+  {
+    "position": "",
+    "company": "Empty Inc"
+  }
+]

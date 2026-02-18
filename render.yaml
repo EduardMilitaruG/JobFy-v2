@@ -1,0 +1,42 @@
+databases:
+  - name: jobfy-db
+    plan: free
+    databaseName: jobfy
+    user: jobfy
+
+services:
+  - type: web
+    name: jobfy-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build -w packages/shared && cd packages/backend && npx prisma generate && npx tsc
+    startCommand: cd packages/backend && npx prisma migrate deploy && node dist/index.js
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: jobfy-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+
+  - type: web
+    name: jobfy-frontend
+    runtime: static
+    buildCommand: npm install && npm run build -w packages/shared && npm run build -w packages/frontend
+    staticPublishPath: packages/frontend/dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: jobfy-backend
+          property: hostURL
