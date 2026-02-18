@@ -24,7 +24,7 @@ services:
   - type: web
     name: jobfy-frontend
     runtime: static
-    buildCommand: npm install && npm run build -w packages/shared && npm run build -w packages/frontend
+    buildCommand: npm install && npm run build -w packages/shared && VITE_API_URL=https://$BACKEND_HOST npm run build -w packages/frontend
     staticPublishPath: packages/frontend/dist
     headers:
       - path: /*
@@ -35,8 +35,8 @@ services:
         source: /*
         destination: /index.html
     envVars:
-      - key: VITE_API_URL
+      - key: BACKEND_HOST
         fromService:
           type: web
           name: jobfy-backend
-          property: hostURL
+          property: host
