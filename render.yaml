@@ -9,7 +9,7 @@ services:
     name: jobfy-backend
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build -w packages/shared && cd packages/backend && npx prisma generate && npx tsc
+    buildCommand: npm install --include=dev && npm run build -w packages/shared && cd packages/backend && npx prisma generate && npx tsc
     startCommand: cd packages/backend && npx prisma migrate deploy && node dist/index.js
     envVars:
       - key: DATABASE_URL
