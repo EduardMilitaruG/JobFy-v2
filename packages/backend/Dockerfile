@@ -36,7 +36,7 @@ RUN npm ci --omit=dev
 COPY --from=builder /app/packages/shared/dist packages/shared/dist
 COPY --from=builder /app/packages/backend/dist packages/backend/dist
 COPY --from=builder /app/packages/backend/prisma packages/backend/prisma
-COPY --from=builder /app/packages/backend/node_modules/.prisma packages/backend/node_modules/.prisma
+COPY --from=builder /app/node_modules/.prisma node_modules/.prisma
 WORKDIR /app/packages/backend
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://localhost:3000/api/health || exit 1
