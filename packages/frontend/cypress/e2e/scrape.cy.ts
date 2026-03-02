@@ -22,7 +22,7 @@ describe("Scrape tab", () => {
           { id: "linkedin", name: "LinkedIn", requiresAuth: true },
         ],
       },
-    }).as("getSites");
+    });
 
     cy.intercept("GET", "/api/scrape/logs", {
       body: {
@@ -40,11 +40,12 @@ describe("Scrape tab", () => {
           },
         ],
       },
-    }).as("getLogs");
+    });
 
     cy.visit("/");
-    cy.contains("Scrape").click();
-    cy.wait(["@getSites", "@getLogs"]);
+    cy.get(".tab").contains("Scrape").click();
+    // Wait for the panel content to appear rather than relying on network alias timing
+    cy.contains("RemoteOK").should("be.visible");
   });
 
   it("renders site toggles", () => {
