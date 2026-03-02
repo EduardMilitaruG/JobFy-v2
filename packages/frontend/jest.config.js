@@ -1,6 +1,5 @@
-import type { Config } from "jest";
-
-const config: Config = {
+/** @type {import('jest').Config} */
+const config = {
   preset: "ts-jest/presets/default-esm",
   testEnvironment: "jsdom",
   extensionsToTreatAsEsm: [".ts", ".tsx"],
@@ -14,7 +13,7 @@ const config: Config = {
       { useESM: true, tsconfig: "tsconfig.json" },
     ],
   },
-  setupFilesAfterSetup: ["@testing-library/jest-dom"],
+  setupFilesAfterEnv: ["@testing-library/jest-dom"],
   testPathIgnorePatterns: ["/node_modules/", "/dist/", "/cypress/"],
 };
 
