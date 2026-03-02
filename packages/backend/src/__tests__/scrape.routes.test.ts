@@ -1,14 +1,16 @@
-import supertest from "supertest";
-import { createApp } from "../app.js";
-import { prisma } from "../lib/prisma.js";
+import { jest } from "@jest/globals";
 
-// Mock scrapers so POST /api/scrape never makes real HTTP calls in integration tests.
-// The test only verifies the HTTP contract; real scraper behaviour is covered in scrapers.test.ts.
-jest.mock("../scrapers/index.js", () => ({
+// Must be called before dynamic imports so the mock is applied when the module loads
+jest.unstable_mockModule("../scrapers/index.js", () => ({
   getScraperForSite: () => ({
     scrape: jest.fn().mockResolvedValue([]),
   }),
 }));
+
+// Dynamic imports required for unstable_mockModule to take effect in ESM
+const { createApp } = await import("../app.js");
+const { prisma } = await import("../lib/prisma.js");
+const supertest = (await import("supertest")).default;
 
 const app = createApp();
 const request = supertest(app);
