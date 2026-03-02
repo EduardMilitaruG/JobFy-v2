@@ -3,7 +3,7 @@ import { jest } from "@jest/globals";
 // Must be called before dynamic imports so the mock is applied when the module loads
 jest.unstable_mockModule("../scrapers/index.js", () => ({
   getScraperForSite: () => ({
-    scrape: jest.fn().mockResolvedValue([]),
+    scrape: jest.fn().mockResolvedValue([] as never),
   }),
 }));
 
