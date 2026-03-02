@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "NODE_OPTIONS='--experimental-vm-modules' jest --forceExit --detectOpenHandles",
+    "test": "NODE_OPTIONS='--experimental-vm-modules' jest --runInBand --forceExit --detectOpenHandles",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "db:migrate": "prisma migrate dev",
