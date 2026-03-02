@@ -1,7 +1,7 @@
 import type { Job, PaginatedResponse } from "@jobfy/shared";
 import { apiFetch } from "./api.js";
 
-interface JobsResponse extends PaginatedResponse<Job> {}
+type JobsResponse = PaginatedResponse<Job>;
 
 export function fetchJobs(params: {
   search?: string;
