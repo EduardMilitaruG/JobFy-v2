@@ -101,9 +101,7 @@ jobs:
           PORT: "3000"
       - run: npx vite --port 5173 &
         working-directory: packages/frontend
-        env:
-          VITE_API_URL: http://localhost:3000
-      - run: npx wait-on http://localhost:3000/api/health http://localhost:5173 --timeout 30000
+      - run: npx wait-on http://localhost:5173 http://localhost:5173/api/health --timeout 30000
       - run: npx cypress run
         working-directory: packages/frontend
 
