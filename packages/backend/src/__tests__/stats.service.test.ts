@@ -61,7 +61,7 @@ describe("stats.service", () => {
     expect(stats.byLocation).toHaveLength(2);
     expect(stats.topTags.length).toBeGreaterThan(0);
 
-    const remoteOK = stats.bySource.find((s) => s.source === "RemoteOK");
+    const remoteOK = stats.bySource.find((s: { source: string; count: number }) => s.source === "RemoteOK");
     expect(remoteOK?.count).toBe(2);
   });
 });

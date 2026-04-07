@@ -51,9 +51,10 @@ export async function matchCVToJobs(
     return { results: [], analyzedCount: 0, truncated: false, resumeText };
   }
 
+  type JobRow = { id: number; jobTitle: string; company: string; location: string; tags: string };
   const jobList = jobs
     .map(
-      (j) =>
+      (j: JobRow) =>
         `[${j.id}] ${j.jobTitle} at ${j.company} (${j.location}) | skills: ${j.tags || "N/A"}`,
     )
     .join("\n");
@@ -85,7 +86,7 @@ Each element must have: {"jobId": number, "score": number, "reason": string, "mi
 
   const parsed = matchResultSchema.parse(JSON.parse(jsonText));
 
-  const validIds = new Set(jobs.map((j) => j.id));
+  const validIds = new Set(jobs.map((j: JobRow) => j.id));
   const results: JobMatchResult[] = parsed
     .filter((r) => validIds.has(r.jobId))
     .sort((a, b) => b.score - a.score);

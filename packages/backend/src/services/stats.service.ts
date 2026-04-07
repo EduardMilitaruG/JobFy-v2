@@ -40,12 +40,12 @@ export async function getStats() {
 
   return {
     totalJobs,
-    bySource: bySource.map((r) => ({ source: r.source, count: r._count.id })),
-    byCompany: byCompany.map((r) => ({
+    bySource: bySource.map((r: { source: string; _count: { id: number } }) => ({ source: r.source, count: r._count.id })),
+    byCompany: byCompany.map((r: { company: string; _count: { id: number } }) => ({
       company: r.company,
       count: r._count.id,
     })),
-    byLocation: byLocation.map((r) => ({
+    byLocation: byLocation.map((r: { location: string; _count: { id: number } }) => ({
       location: r.location,
       count: r._count.id,
     })),
