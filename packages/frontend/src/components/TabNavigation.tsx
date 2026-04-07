@@ -8,6 +8,7 @@ const TABS = [
   { id: "jobs", label: "Jobs" },
   { id: "stats", label: "Statistics" },
   { id: "scrape", label: "Scrape" },
+  { id: "cv-match", label: "✦ CV Match" },
 ];
 
 export function TabNavigation({

@@ -10,6 +10,7 @@ const envSchema = z.object({
   INFOJOBS_PASSWORD: z.string().optional(),
   LINKEDIN_USERNAME: z.string().optional(),
   LINKEDIN_PASSWORD: z.string().optional(),
+  GROQ_API_KEY: z.string().min(1),
 });
 
 export const env = envSchema.parse(process.env);

@@ -15,6 +15,9 @@
   },
   "dependencies": {
     "@jobfy/shared": "*",
+    "@testing-library/user-event": "^14.6.1",
+    "axe-core": "^4.11.1",
+    "cypress-axe": "^1.7.0",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

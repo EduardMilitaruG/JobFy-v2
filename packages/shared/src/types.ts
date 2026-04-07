@@ -63,3 +63,20 @@ export interface SiteInfo {
   name: string;
   requiresAuth: boolean;
 }
+
+export interface JobMatchResult {
+  jobId: number;
+  score: number;
+  reason: string;
+  missingSkills: string[];
+}
+
+export interface CVMatchResponse {
+  results: JobMatchResult[];
+  analyzedCount: number;
+  truncated: boolean;
+}
+
+export interface CoverLetterResponse {
+  coverLetter: string;
+}

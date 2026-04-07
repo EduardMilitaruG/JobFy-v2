@@ -1,1 +1,1 @@
-// Cypress support file
+import "cypress-axe";

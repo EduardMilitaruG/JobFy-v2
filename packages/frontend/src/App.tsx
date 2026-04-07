@@ -7,6 +7,7 @@ import { JobTable } from "./components/JobTable.js";
 import { JobPagination } from "./components/JobPagination.js";
 import { StatsCharts } from "./components/StatsCharts.js";
 import { ScrapePanel } from "./components/ScrapePanel.js";
+import { CVMatchPanel } from "./components/CVMatchPanel.js";
 import { useJobs } from "./hooks/useJobs.js";
 import { useStats } from "./hooks/useStats.js";
 import "./styles/globals.css";
@@ -19,6 +20,7 @@ export default function App() {
     jobs,
     total,
     loading,
+    error: jobsError,
     search,
     setSearch,
     sourceFilter,
@@ -51,6 +53,11 @@ export default function App() {
 
         {activeTab === "jobs" && (
           <div className="jobs-section">
+            {jobsError && (
+              <div className="error-banner" role="alert">
+                {jobsError}
+              </div>
+            )}
             <JobFilters
               search={search}
               onSearchChange={setSearch}
@@ -78,6 +85,8 @@ export default function App() {
         {activeTab === "scrape" && (
           <ScrapePanel onScrapeComplete={refreshAll} />
         )}
+
+        {activeTab === "cv-match" && <CVMatchPanel jobs={jobs} />}
       </main>
 
       <Footer />

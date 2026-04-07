@@ -6,6 +6,7 @@ import jobsRoutes from "./routes/jobs.routes.js";
 import statsRoutes from "./routes/stats.routes.js";
 import scrapeRoutes from "./routes/scrape.routes.js";
 import sitesRoutes from "./routes/sites.routes.js";
+import cvMatchRoutes from "./routes/cvMatch.routes.js";
 
 export function createApp() {
   const app = express();
@@ -22,6 +23,7 @@ export function createApp() {
   app.use("/api/stats", statsRoutes);
   app.use("/api/scrape", scrapeRoutes);
   app.use("/api/sites", sitesRoutes);
+  app.use("/api/cv-match", cvMatchRoutes);
 
   app.use(errorHandler);
 
