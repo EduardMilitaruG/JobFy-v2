@@ -20,12 +20,23 @@ const coverLetterSchema = z.object({
   jobId: z.coerce.number().int().positive(),
 });
 
+const matchFromTextSchema = z.object({
+  resumeText: z.string().min(1),
+  jobIds: z.array(z.number().int().positive()).optional().default([]),
+});
+
 const router = Router();
 
 router.post("/", upload.single("resume"), async (req, res, next) => {
   try {
     if (!req.file) {
       res.status(400).json({ error: "PDF file required" });
+      return;
+    }
+
+    // Validate PDF magic bytes — MIME type alone can be spoofed
+    if (!cvMatchService.isPdf(req.file.buffer)) {
+      res.status(400).json({ error: "Uploaded file does not appear to be a valid PDF" });
       return;
     }
 
@@ -41,6 +52,35 @@ router.post("/", upload.single("resume"), async (req, res, next) => {
     const result = await cvMatchService.matchCVToJobs(req.file.buffer, jobIds);
     res.json(result);
   } catch (err) {
+    // Propagate operational errors with their message so the frontend can show them
+    if (err instanceof Error) {
+      const operationalPrefixes = [
+        "Resume text too short",
+        "AI scoring service",
+        "AI returned an unexpected",
+      ];
+      if (operationalPrefixes.some((p) => err.message.startsWith(p))) {
+        res.status(422).json({ error: err.message });
+        return;
+      }
+    }
+    next(err);
+  }
+});
+
+router.post("/from-text", async (req, res, next) => {
+  try {
+    const { resumeText, jobIds } = matchFromTextSchema.parse(req.body);
+    const result = await cvMatchService.matchCVFromText(resumeText, jobIds);
+    res.json(result);
+  } catch (err) {
+    if (err instanceof Error) {
+      const operationalPrefixes = ["Resume text too short", "AI scoring service", "AI returned an unexpected"];
+      if (operationalPrefixes.some((p) => err.message.startsWith(p))) {
+        res.status(422).json({ error: err.message });
+        return;
+      }
+    }
     next(err);
   }
 });
@@ -51,6 +91,10 @@ router.post("/cover-letter", async (req, res, next) => {
     const coverLetter = await cvMatchService.generateCoverLetter(resumeText, jobId);
     res.json({ coverLetter });
   } catch (err) {
+    if (err instanceof Error && err.message.startsWith("AI writing service")) {
+      res.status(422).json({ error: err.message });
+      return;
+    }
     next(err);
   }
 });

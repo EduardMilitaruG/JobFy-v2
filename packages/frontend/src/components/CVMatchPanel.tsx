@@ -11,26 +11,33 @@ export function CVMatchPanel({ jobs }: CVMatchPanelProps) {
   const {
     file,
     setFile,
+    resumeFileName,
     loading,
     error,
     scoredJobs,
     analyzedCount,
     truncated,
     analyze,
+    canAnalyze,
+    clearResume,
     coverLetters,
     coverLetterLoading,
     getCoverLetter,
+    regenerateCoverLetter,
   } = useCVMatch(jobs);
 
   return (
     <div className="cv-match-section">
       <CVUploadForm
         file={file}
+        resumeFileName={resumeFileName}
         onFileChange={setFile}
         onAnalyze={analyze}
+        onClear={clearResume}
         loading={loading}
         error={error}
         jobCount={jobs.length}
+        canAnalyze={canAnalyze}
       />
 
       {scoredJobs && (
@@ -41,6 +48,7 @@ export function CVMatchPanel({ jobs }: CVMatchPanelProps) {
           coverLetters={coverLetters}
           coverLetterLoading={coverLetterLoading}
           onGenerateCoverLetter={getCoverLetter}
+          onRegenerateCoverLetter={regenerateCoverLetter}
         />
       )}
     </div>

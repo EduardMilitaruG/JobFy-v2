@@ -5,10 +5,10 @@ interface TabNavigationProps {
 }
 
 const TABS = [
-  { id: "jobs", label: "Jobs" },
-  { id: "stats", label: "Statistics" },
-  { id: "scrape", label: "Scrape" },
-  { id: "cv-match", label: "✦ CV Match" },
+  { id: "jobs",     label: "Jobs",     num: "01" },
+  { id: "stats",    label: "Stats",    num: "02" },
+  { id: "scrape",   label: "Scrape",   num: "03" },
+  { id: "cv-match", label: "CV Match", num: "04" },
 ];
 
 export function TabNavigation({
@@ -24,8 +24,13 @@ export function TabNavigation({
           className={`tab ${activeTab === tab.id ? "active" : ""}`}
           onClick={() => onTabChange(tab.id)}
         >
+          <span className="tab-num">{tab.num}</span>
           {tab.label}
-          {tab.id === "jobs" ? ` (${jobCount})` : ""}
+          {tab.id === "jobs" && jobCount > 0 && (
+            <span style={{ color: "var(--text-muted)", fontSize: "0.7rem" }}>
+              ({jobCount})
+            </span>
+          )}
         </button>
       ))}
     </div>

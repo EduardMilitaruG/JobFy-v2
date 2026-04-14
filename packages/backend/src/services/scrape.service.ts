@@ -45,6 +45,7 @@ async function runScrape(
       try {
         const jobs = await scraper.scrape(keyword, location);
 
+        let duplicates = 0;
         for (const job of jobs) {
           try {
             await prisma.job.create({
@@ -60,8 +61,12 @@ async function runScrape(
             });
             totalJobs++;
           } catch {
-            // Unique constraint violation — duplicate, skip
+            // Unique constraint violation — already in DB
+            duplicates++;
           }
+        }
+        if (duplicates > 0) {
+          logger.info({ siteId, duplicates }, "Skipped duplicate jobs");
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

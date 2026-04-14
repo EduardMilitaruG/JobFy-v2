@@ -7,12 +7,12 @@ import {
 } from "recharts";
 
 const COLORS = [
-  "#6366f1",
-  "#8b5cf6",
-  "#a855f7",
-  "#d946ef",
-  "#ec4899",
-  "#f43f5e",
+  "#f5a623",
+  "#e09518",
+  "#cc8412",
+  "#22c55e",
+  "#888888",
+  "#444444",
 ];
 
 interface SourcePieChartProps {

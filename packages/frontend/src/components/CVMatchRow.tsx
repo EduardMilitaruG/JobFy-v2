@@ -7,6 +7,7 @@ interface CVMatchRowProps {
   coverLetter: string | undefined;
   coverLetterLoading: boolean;
   onGenerateCoverLetter: (jobId: number) => void;
+  onRegenerateCoverLetter: (jobId: number) => void;
 }
 
 function ScoreBadge({ score }: { score: number }) {
@@ -20,6 +21,7 @@ export function CVMatchRow({
   coverLetter,
   coverLetterLoading,
   onGenerateCoverLetter,
+  onRegenerateCoverLetter,
 }: CVMatchRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -111,7 +113,7 @@ export function CVMatchRow({
                   <div className="cover-letter-actions">
                     <button
                       className="btn btn-sm"
-                      onClick={() => onGenerateCoverLetter(job.id)}
+                      onClick={() => onRegenerateCoverLetter(job.id)}
                       disabled={coverLetterLoading}
                       title="Regenerate"
                     >

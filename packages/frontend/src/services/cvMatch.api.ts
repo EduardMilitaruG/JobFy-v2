@@ -23,6 +23,24 @@ export async function matchCV(
   return res.json();
 }
 
+export async function matchCVFromText(
+  resumeText: string,
+  jobIds: number[],
+): Promise<CVMatchResponse & { resumeText: string }> {
+  const res = await fetch(`${BASE_URL}/api/cv-match/from-text`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ resumeText, jobIds }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Request failed: ${res.status}`);
+  }
+
+  return res.json();
+}
+
 export async function generateCoverLetter(
   resumeText: string,
   jobId: number,

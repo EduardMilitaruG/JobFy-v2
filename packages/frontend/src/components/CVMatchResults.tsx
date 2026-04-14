@@ -9,6 +9,7 @@ interface CVMatchResultsProps {
   coverLetters: Map<number, string>;
   coverLetterLoading: Set<number>;
   onGenerateCoverLetter: (jobId: number) => void;
+  onRegenerateCoverLetter: (jobId: number) => void;
 }
 
 export function CVMatchResults({
@@ -18,6 +19,7 @@ export function CVMatchResults({
   coverLetters,
   coverLetterLoading,
   onGenerateCoverLetter,
+  onRegenerateCoverLetter,
 }: CVMatchResultsProps) {
   const [minScore, setMinScore] = useState(0);
 
@@ -70,6 +72,7 @@ export function CVMatchResults({
               coverLetter={coverLetters.get(job.id)}
               coverLetterLoading={coverLetterLoading.has(job.id)}
               onGenerateCoverLetter={onGenerateCoverLetter}
+              onRegenerateCoverLetter={onRegenerateCoverLetter}
             />
           ))}
         </div>
