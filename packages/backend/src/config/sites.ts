@@ -49,7 +49,7 @@ export const SITES_CONFIG: Record<string, FullSiteConfig> = {
 };
 
 export const REQUEST_TIMEOUT = 30_000;
-export const REQUEST_DELAY = 2_000;
+const REQUEST_DELAY = 2_000;
 
 export const DEFAULT_HEADERS = {
   "User-Agent":

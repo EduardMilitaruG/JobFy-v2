@@ -1,6 +1,5 @@
 import type { CVMatchResponse, CoverLetterResponse } from "@jobfy/shared";
-
-const BASE_URL = import.meta.env.VITE_API_URL ?? "";
+import { BASE_URL } from "./api.js";
 
 export async function matchCV(
   file: File,

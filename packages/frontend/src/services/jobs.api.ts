@@ -17,10 +17,6 @@ export function fetchJobs(params: {
   return apiFetch(`/api/jobs?${qs}`);
 }
 
-export function fetchJob(id: number): Promise<Job> {
-  return apiFetch(`/api/jobs/${id}`);
-}
-
 export function deleteJob(id: number): Promise<{ message: string }> {
   return apiFetch(`/api/jobs/${id}`, { method: "DELETE" });
 }

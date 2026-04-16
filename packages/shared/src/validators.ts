@@ -3,7 +3,7 @@ import { SITE_IDS } from "./constants.js";
 
 export const scrapeRequestSchema = z.object({
   sites: z
-    .array(z.enum(SITE_IDS as unknown as [string, ...string[]]))
+    .array(z.enum([...SITE_IDS] as [string, ...string[]]))
     .min(1, "Select at least one site"),
   keyword: z.string().max(100).optional().default(""),
   location: z.string().max(100).optional().default(""),

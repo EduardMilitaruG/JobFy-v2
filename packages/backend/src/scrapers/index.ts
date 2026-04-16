@@ -19,10 +19,3 @@ export function getScraperForSite(siteId: string): BaseScraper | null {
   return new Scraper();
 }
 
-export {
-  RemoteOKScraper,
-  TecnoempleoScraper,
-  InfoJobsScraper,
-  LinkedInScraper,
-  IndeedScraper,
-};

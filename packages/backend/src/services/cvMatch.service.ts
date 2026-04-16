@@ -38,7 +38,7 @@ export function isPdf(buffer: Buffer): boolean {
   return buffer.slice(0, 4).toString("ascii") === "%PDF";
 }
 
-export async function extractPdfText(buffer: Buffer): Promise<string> {
+async function extractPdfText(buffer: Buffer): Promise<string> {
   const data = await pdfParse(buffer);
   return data.text
     .replace(/\n{3,}/g, "\n\n")
