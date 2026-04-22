@@ -49,7 +49,7 @@ export function StatsCharts({ stats }: StatsChartsProps) {
           data={stats.byCompany ?? []}
           dataKey="count"
           nameKey="company"
-          color="#f5a623"
+          color="#2563eb"
         />
 
         <BarChartCard
@@ -57,7 +57,7 @@ export function StatsCharts({ stats }: StatsChartsProps) {
           data={stats.topTags ?? []}
           dataKey="count"
           nameKey="tag"
-          color="#f5a623"
+          color="#2563eb"
           layout="horizontal"
           wide
           maxItems={12}
@@ -68,7 +68,7 @@ export function StatsCharts({ stats }: StatsChartsProps) {
           data={stats.byLocation ?? []}
           dataKey="count"
           nameKey="location"
-          color="#f5a623"
+          color="#2563eb"
         />
       </div>
     </div>

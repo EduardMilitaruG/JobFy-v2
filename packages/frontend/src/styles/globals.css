@@ -4,9 +4,9 @@
   font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   line-height: 1.6;
   font-weight: 400;
-  color-scheme: dark;
-  color: #ffffff;
-  background-color: #0a0a0a;
+  color-scheme: light;
+  color: #0f172a;
+  background-color: #ffffff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -15,12 +15,12 @@
 
 a {
   font-weight: 500;
-  color: #f5a623;
+  color: #2563eb;
   text-decoration: none;
 }
 
 a:hover {
-  color: #e09518;
+  color: #1d4ed8;
 }
 
 body {
@@ -44,13 +44,13 @@ button {
   font-size: 0.875rem;
   font-weight: 500;
   font-family: inherit;
-  background-color: #141414;
+  background-color: #f8fafc;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 button:focus-visible {
-  outline: 2px solid #f5a623;
+  outline: 2px solid #2563eb;
   outline-offset: 2px;
 }
 
