@@ -30,7 +30,7 @@ export function SourcePieChart({ data }: SourcePieChartProps) {
           cx="50%"
           cy="50%"
           labelLine={false}
-          label={(props: { source: string; count: number }) => `${props.source}: ${props.count}`}
+          label={(props) => `${props.name}: ${props.value}`}
           outerRadius={100}
           fill="#8884d8"
           dataKey="count"
