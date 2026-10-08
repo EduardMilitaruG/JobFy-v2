@@ -39,7 +39,7 @@ export function CVUploadForm({
       </div>
 
       <p className="cv-upload-description">
-        Upload your CV and Claude will score each job based on how well your
+        Upload your CV and the AI will score each job based on how well your
         skills and experience match.
       </p>
 
