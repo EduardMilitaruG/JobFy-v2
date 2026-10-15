@@ -14,3 +14,10 @@ export function validateQuery(schema: ZodSchema) {
     next();
   };
 }
+
+export function validateParams(schema: ZodSchema) {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    req.params = schema.parse(req.params) as Record<string, string>;
+    next();
+  };
+}
