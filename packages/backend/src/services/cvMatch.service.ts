@@ -3,7 +3,10 @@ import { createRequire } from "module";
 import { z } from "zod";
 
 const require = createRequire(import.meta.url);
-const pdfParse = require("pdf-parse") as (
+// Import the library file, not the package root: pdf-parse's index.js runs a
+// debug self-test when `module.parent` is unset (as under Jest) and crashes
+// trying to open test/data/05-versions-space.pdf.
+const pdfParse = require("pdf-parse/lib/pdf-parse.js") as (
   buffer: Buffer,
 ) => Promise<{ text: string; numpages: number }>;
 import { prisma } from "../lib/prisma.js";
