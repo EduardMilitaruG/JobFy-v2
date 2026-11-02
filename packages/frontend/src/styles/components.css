@@ -797,6 +797,8 @@ body {
   .form-row { grid-template-columns: 1fr; }
   .header-navbar { padding: 0 1rem; }
   .header-status { display: none; }
+  .tabs { overflow-x: auto; scrollbar-width: none; }
+  .tab { flex-shrink: 0; white-space: nowrap; }
 }
 
 /* ── Error banner ────────────────────────────────────────────────────────── */

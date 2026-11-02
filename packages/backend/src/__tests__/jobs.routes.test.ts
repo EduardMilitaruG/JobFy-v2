@@ -86,6 +86,13 @@ describe("GET /api/jobs/:id", () => {
     const res = await request.get("/api/jobs/99999");
     expect(res.status).toBe(404);
   });
+
+  it.each(["abc", "1.5", "0", "-3"])("should return 400 for invalid id %s", async (id) => {
+    const res = await request.get(`/api/jobs/${id}`);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Validation error");
+    expect(res.body.details).toBeDefined();
+  });
 });
 
 describe("DELETE /api/jobs/:id", () => {
@@ -104,6 +111,18 @@ describe("DELETE /api/jobs/:id", () => {
 
     const check = await prisma.job.findUnique({ where: { id: job.id } });
     expect(check).toBeNull();
+  });
+
+  it("should return 404 for missing job", async () => {
+    const res = await request.delete("/api/jobs/99999");
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Job not found" });
+  });
+
+  it("should return 400 for a non-numeric id", async () => {
+    const res = await request.delete("/api/jobs/abc");
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Validation error");
   });
 });
 
