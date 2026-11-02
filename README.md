@@ -21,7 +21,7 @@ A full-stack job scraper dashboard built as a TypeScript monorepo. Scrapes job l
 - **Search & filter** — debounced search, source filter, paginated results
 - **Stats dashboard** — charts by source, company, skills, and location (Recharts)
 - **Full Docker setup** — one command to run the whole stack locally
-- **CI/CD pipeline** — lint → unit tests → integration tests → E2E → Docker build
+- **CI/CD pipeline** — lint → backend + frontend tests → Docker build, with E2E in [jobfy-playwright-tests](https://github.com/EduardMilitaruG/jobfy-playwright-tests)
 
 ---
 
@@ -147,11 +147,13 @@ npm run cypress:run -w packages/frontend
 ## CI Pipeline
 
 ```
-lint + typecheck → test-backend ──┬── e2e → build-docker
-                → test-frontend ──┘
+lint + typecheck → test-backend  (43 Jest + Supertest) ──┬── build-docker
+                → test-frontend (29 RTL component)    ──┘
 ```
 
-Backend and frontend tests run in parallel. E2E tests spin up both services against a real PostgreSQL instance.
+Backend and frontend tests run in parallel on every push and pull request.
+
+End-to-end coverage lives in a separate repo, [jobfy-playwright-tests](https://github.com/EduardMilitaruG/jobfy-playwright-tests): 55 Playwright + TypeScript tests (API, Chromium, Firefox, mobile) that boot this app against a real PostgreSQL instance in CI. That suite found the three bugs fixed in [#2](https://github.com/EduardMilitaruG/JobFy-v2/pull/2). The Cypress specs in `packages/frontend/cypress` run locally.
 
 ---
 
