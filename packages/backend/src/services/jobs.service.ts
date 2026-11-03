@@ -1,6 +1,12 @@
 import { prisma } from "../lib/prisma.js";
 import type { JobQueryInput } from "@jobfy/shared";
 
+// `contains` becomes ILIKE '%term%' and Prisma doesn't escape the pattern
+// characters, so a search for "%" would match every job.
+function escapeLike(term: string) {
+  return term.replace(/[\\%_]/g, "\\$&");
+}
+
 export async function getJobs(filters: JobQueryInput) {
   const where: Record<string, unknown> = {};
 
@@ -9,10 +15,11 @@ export async function getJobs(filters: JobQueryInput) {
   }
 
   if (filters.search) {
+    const search = escapeLike(filters.search);
     where.OR = [
-      { jobTitle: { contains: filters.search, mode: "insensitive" } },
-      { company: { contains: filters.search, mode: "insensitive" } },
-      { tags: { contains: filters.search, mode: "insensitive" } },
+      { jobTitle: { contains: search, mode: "insensitive" } },
+      { company: { contains: search, mode: "insensitive" } },
+      { tags: { contains: search, mode: "insensitive" } },
     ];
   }
 

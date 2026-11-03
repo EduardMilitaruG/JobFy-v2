@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { requestLogger } from "./middleware/requestLogger.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { HttpError } from "./lib/httpError.js";
 import jobsRoutes from "./routes/jobs.routes.js";
 import statsRoutes from "./routes/stats.routes.js";
 import scrapeRoutes from "./routes/scrape.routes.js";
@@ -24,6 +25,9 @@ export function createApp() {
   app.use("/api/scrape", scrapeRoutes);
   app.use("/api/sites", sitesRoutes);
   app.use("/api/cv-match", cvMatchRoutes);
+
+  // Unknown API routes get the same JSON error shape as everything else
+  app.use("/api", (_req, _res, next) => next(new HttpError(404, "Not found")));
 
   app.use(errorHandler);
 

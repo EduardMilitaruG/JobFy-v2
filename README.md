@@ -147,13 +147,13 @@ npm run cypress:run -w packages/frontend
 ## CI Pipeline
 
 ```
-lint + typecheck → test-backend  (43 Jest + Supertest) ──┬── build-docker
+lint + typecheck → test-backend  (59 Jest + Supertest) ──┬── build-docker
                 → test-frontend (29 RTL component)    ──┘
 ```
 
 Backend and frontend tests run in parallel on every push and pull request.
 
-End-to-end coverage lives in a separate repo, [jobfy-playwright-tests](https://github.com/EduardMilitaruG/jobfy-playwright-tests): 55 Playwright + TypeScript tests (API, Chromium, Firefox, mobile) that boot this app against a real PostgreSQL instance in CI. That suite found the three bugs fixed in [#2](https://github.com/EduardMilitaruG/JobFy-v2/pull/2). The Cypress specs in `packages/frontend/cypress` run locally.
+End-to-end coverage lives in a separate repo, [jobfy-playwright-tests](https://github.com/EduardMilitaruG/jobfy-playwright-tests): 75 Playwright + TypeScript tests (API, desktop Chromium, Pixel 5) that boot this app against a real PostgreSQL instance in CI. That suite found the three bugs fixed in [#2](https://github.com/EduardMilitaruG/JobFy-v2/pull/2) and nine API error-handling bugs whose fixes have backend regression tests in `src/__tests__/errors.routes.test.ts`. The Cypress specs in `packages/frontend/cypress` run locally.
 
 ---
 

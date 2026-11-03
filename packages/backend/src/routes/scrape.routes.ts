@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { scrapeRequestSchema } from "@jobfy/shared";
-import { validateBody } from "../middleware/validateRequest.js";
+import { validateBody, validateParams } from "../middleware/validateRequest.js";
+import { idParamsSchema } from "../lib/ids.js";
 import * as scrapeService from "../services/scrape.service.js";
 
 const router = Router();
@@ -29,7 +30,7 @@ router.get("/logs", async (_req, res, next) => {
   }
 });
 
-router.get("/logs/:id", async (req, res, next) => {
+router.get("/logs/:id", validateParams(idParamsSchema), async (req, res, next) => {
   try {
     const log = await scrapeService.getScrapeLogById(Number(req.params.id));
     if (!log) {

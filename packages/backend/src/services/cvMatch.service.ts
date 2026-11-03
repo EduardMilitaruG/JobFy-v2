@@ -13,6 +13,7 @@ import { prisma } from "../lib/prisma.js";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import type { CVMatchResponse, JobMatchResult } from "@jobfy/shared";
+import { HttpError } from "../lib/httpError.js";
 
 const client = new Groq({ apiKey: env.GROQ_API_KEY });
 
@@ -168,7 +169,7 @@ export async function generateCoverLetter(
     select: { jobTitle: true, company: true, location: true, tags: true },
   });
 
-  if (!job) throw new Error("Job not found");
+  if (!job) throw new HttpError(404, "Job not found");
 
   let content: string;
   try {
