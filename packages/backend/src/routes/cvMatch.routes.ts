@@ -2,6 +2,8 @@ import { Router } from "express";
 import multer from "multer";
 import { z } from "zod";
 import * as cvMatchService from "../services/cvMatch.service.js";
+import { HttpError } from "../lib/httpError.js";
+import { dbIdSchema } from "../lib/ids.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -10,19 +12,19 @@ const upload = multer({
     if (file.mimetype === "application/pdf") {
       cb(null, true);
     } else {
-      cb(new Error("Only PDF files are accepted"));
+      cb(new HttpError(400, "Only PDF files are accepted"));
     }
   },
 });
 
 const coverLetterSchema = z.object({
   resumeText: z.string().min(1),
-  jobId: z.coerce.number().int().positive(),
+  jobId: z.coerce.number().pipe(dbIdSchema),
 });
 
 const matchFromTextSchema = z.object({
   resumeText: z.string().min(1),
-  jobIds: z.array(z.number().int().positive()).optional().default([]),
+  jobIds: z.array(dbIdSchema).optional().default([]),
 });
 
 const router = Router();
@@ -43,7 +45,7 @@ router.post("/", upload.single("resume"), async (req, res, next) => {
     let jobIds: number[] = [];
     if (req.body.jobIds) {
       try {
-        jobIds = z.array(z.number()).parse(JSON.parse(req.body.jobIds));
+        jobIds = z.array(dbIdSchema).parse(JSON.parse(req.body.jobIds));
       } catch {
         jobIds = [];
       }
